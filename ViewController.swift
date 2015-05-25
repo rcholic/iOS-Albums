@@ -22,12 +22,13 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, HorizontalScrollerDelegate {
     
     private var allAlbums = [Album]()
     private var currentAlbumData : (titles:[String], values: [String])?
     private var currentAlbumIndex = 0
 
+    @IBOutlet var scroller: HorizontalScroller!
 	@IBOutlet var dataTable: UITableView!
 	@IBOutlet var toolbar: UIToolbar!
 	
@@ -47,6 +48,8 @@ class ViewController: UIViewController {
         dataTable.backgroundView = nil
         view.addSubview(dataTable!)
         self.showDataForAlbum(currentAlbumIndex)
+        scroller.delegate = self
+        reloadScroller()
     }
     
     func showDataForAlbum(albumIndex: Int) {
@@ -92,5 +95,48 @@ extension ViewController: UITableViewDataSource {
 }
 
 extension ViewController: UITableViewDelegate {
+}
+
+//implement HorizontalScrollerDelegate methods
+extension ViewController: HorizontalScrollerDelegate {
+    func horizontalScrollerClickedViewAtIndex(scroller: HorizontalScroller, index: Int) {
+        // grab the previously selected album, deselect its album cover
+        let previousAlbumView = scroller.viewAtIndex(currentAlbumIndex) as! AlbumView
+        previousAlbumView.highlightAlbum(didHighlightView: false)
+        //store the current album cover index
+        currentAlbumIndex = index
+        // grab the album cover that is currently selected, highlight it
+        let albumView = scroller.viewAtIndex(index) as! AlbumView
+        albumView.highlightAlbum(didHighlightView: true)
+        //display the data for the new album within the table view
+        showDataForAlbum(index)
+    }
+    
+    func numberOfViewsForHorizontalScroller(scroller: HorizontalScroller) -> (Int) {
+        return allAlbums.count
+    }
+    
+    func horizontalScrollerViewAtIndex(scroller: HorizontalScroller, index: Int) -> (UIView) {
+        let album = allAlbums[index]
+        let albumView = AlbumView(frame: CGRect(x: 0, y: 0, width: 100, height: 100), albumCover: album.coverUrl)
+        if currentAlbumIndex == index {
+            albumView.highlightAlbum(didHighlightView: true)
+        } else {
+            albumView.highlightAlbum(didHighlightView: false)
+        }
+        return albumView
+    }
+    
+    // add the scroller to the main view
+    func reloadScroller() {
+        allAlbums = LibraryAPI.sharedInstance.getAlbums()
+        if currentAlbumIndex < 0 {
+            currentAlbumIndex = 0
+        } else if currentAlbumIndex >= allAlbums.count {
+            currentAlbumIndex = allAlbums.count - 1
+        }
+        scroller.reload()
+        showDataForAlbum(currentAlbumIndex)
+    }
 }
 
